@@ -21,7 +21,10 @@ query = (
     "WHERE difference > 0.0 "
 )
 
-def get_elrs(config, query):
+def get_elrs(config: dict, query: str) -> dict:
+    """
+    Fetch gaps in ELR data from the DB and read data into dictionary.
+    """
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor()
     cursor.execute(query)
@@ -38,10 +41,12 @@ def get_elrs(config, query):
 
 @app.route('/')
 def index() -> str:
+    """Basic view to check that service is runnign"""
     return "running"
 
 @app.route('/elrs')
 def elrs() -> str:
+    """View to fetch gaps in ELR data formatted as a JSON string"""
     return json.dumps(get_elrs(config=config, query=query))
 
 if __name__ == '__main__':
