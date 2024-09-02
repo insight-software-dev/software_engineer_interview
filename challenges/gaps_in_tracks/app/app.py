@@ -13,17 +13,24 @@ config = {
     }
 
 query = (
-    "SELECT elr_code, mileage_from, mileage_to, "
+    "WITH cte AS (SELECT elr_code, mileage_from, mileage_to, "
     "LAG (mileage_to, 1, null) OVER (PARTITION BY elr_code ORDER BY mileage_from ASC) AS previous_end, "
     "mileage_from - LAG (mileage_to, 1, null) OVER (PARTITION BY elr_code ORDER BY mileage_from ASC) AS difference "
-    "FROM mileages"
+    "FROM mileages) "
+    "SELECT elr_code, previous_end AS mileage_from, mileage_from AS mileage_to FROM cte "
+    "WHERE difference > 0.0 "
 )
 
 def get_elrs(config, query):
     connection = mysql.connector.connect(**config)
     cursor = connection.cursor()
     cursor.execute(query)
-    results = [{"elr_code": elr_code, "mileage_from": mileage_from, "mileage_to": mileage_to, "previous_end": previous_end, "difference": difference,} for (elr_code, mileage_from, mileage_to, previous_end, difference) in cursor]
+    results = {}
+    for (elr_code, mileage_from, mileage_to,) in cursor:
+        if elr_code in results:
+            results[elr_code].append({"mileage_from": mileage_from, "mileage_to": mileage_to,})
+        else:
+            results[elr_code] = [{"mileage_from": mileage_from, "mileage_to": mileage_to,},]
     cursor.close()
     connection.close()
     return results
